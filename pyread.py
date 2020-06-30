@@ -1,3 +1,4 @@
+""" naive python to have a simple comparison """
 import time
 import numpy as np
 
