@@ -10,15 +10,16 @@ use std::io::{BufRead, BufReader};
 
 fn main() {
     let file = get_args();
-    let (lat, long) = csv_no_serde(&file);
+    let (lat, long) = csv_no_serde_ndarray(&file);
     println!("{}", lat);
     println!("{}", long);
-    let (lat, long) = csv_serde(&file);
+    let (lat, long) = csv_serde_ndarray(&file);
     println!("{}", lat);
     println!("{}", long);
-    let (lat, long) = csv_manual(&file);
+    let (lat, long) = buffer_ndarray(&file);
     println!("{}", lat);
     println!("{}", long);
+    let _vv_strings = buffer_string(&file);
 }
 
 
@@ -49,10 +50,11 @@ struct Record {
 }
 
 
-fn csv_serde(arg_file: &String) -> (ndarray::Array1<f64>, ndarray::Array1<f64>) {
+fn csv_serde_ndarray(arg_file: &String) -> (ndarray::Array1<f64>, ndarray::Array1<f64>) {
     let mut lat_vec: Vec<f64> = Vec::new();
     let mut long_vec: Vec<f64> = Vec::new();
-    // let mut lat_vec: Vec<f64> = Vec::with_capacity(7000);
+    // allocating with capacity doesn't change much, too small the csv?!
+    // let mut lat_vec: Vec<f64> = Vec::with_capacity(7000); 
     // let mut long_vec: Vec<f64> = Vec::with_capacity(7000);
     let file = File::open(arg_file).expect("could not open file ");
     let mut rdr = csv::Reader::from_reader(file);
@@ -73,7 +75,7 @@ fn csv_serde(arg_file: &String) -> (ndarray::Array1<f64>, ndarray::Array1<f64>) 
 }
 
 
-fn csv_no_serde(arg_file: &String) -> (ndarray::Array1<f64>, ndarray::Array1<f64>) {
+fn csv_no_serde_ndarray(arg_file: &String) -> (ndarray::Array1<f64>, ndarray::Array1<f64>) {
     let mut lat_vec: Vec<f64> = Vec::new();
     let mut long_vec: Vec<f64> = Vec::new();
     let file = File::open(arg_file).expect("could not open file");
@@ -95,7 +97,7 @@ fn csv_no_serde(arg_file: &String) -> (ndarray::Array1<f64>, ndarray::Array1<f64
 
 
 
-fn _csv_manual(arg_file: &String) -> Vec<Vec<String>> {
+fn buffer_string(arg_file: &String) -> Vec<Vec<String>> {
     let file = File::open(arg_file).unwrap();
     let buf = BufReader::new(file);
     let string_vec : Vec<Vec<String>> = buf.lines()
@@ -107,7 +109,7 @@ fn _csv_manual(arg_file: &String) -> Vec<Vec<String>> {
 }
 
 
-fn csv_manual(arg_file: &String) -> (ndarray::Array1<f64>, ndarray::Array1<f64>) {
+fn buffer_ndarray(arg_file: &String) -> (ndarray::Array1<f64>, ndarray::Array1<f64>) {
     let file = File::open(arg_file).unwrap();
     let buf = BufReader::new(file);
     let mut city_vec: Vec<String> = Vec::new();
@@ -162,28 +164,37 @@ fn csv_manual(arg_file: &String) -> (ndarray::Array1<f64>, ndarray::Array1<f64>)
 // BENCHMARKS
 
 #[bench]
-fn testing_serde(b: &mut test::Bencher) {
+fn testing_csv_serde_ndarary(b: &mut test::Bencher) {
     let file = String::from("uspop.csv");
     b.iter(|| {
-        let (lat, long) = csv_serde(&file);
+        let (lat, long) = csv_serde_ndarray(&file);
         test::black_box((lat, long));
     });
 }
 
 #[bench]
-fn testing_no_serde(b: &mut test::Bencher) {
+fn testing_csv_no_serde_ndarray(b: &mut test::Bencher) {
     let file = String::from("uspop.csv");
     b.iter(|| {
-        let (lat, long) = csv_no_serde(&file);
+        let (lat, long) = csv_no_serde_ndarray(&file);
         test::black_box((lat, long));
     });
 }
 
 #[bench]
-fn testing_manual(b: &mut test::Bencher) {
+fn testing_buffer_ndarray(b: &mut test::Bencher) {
     let file = String::from("uspop.csv");
     b.iter(|| {
-        let (lat, long) = csv_manual(&file);
+        let (lat, long) = buffer_ndarray(&file);
         test::black_box((lat, long));
+    });
+}
+
+#[bench]
+fn testing_buffer_string(b: &mut test::Bencher) {
+    let file = String::from("uspop.csv");
+    b.iter(|| {
+        let line_string = buffer_string(&file);
+        test::black_box(line_string);
     });
 }
