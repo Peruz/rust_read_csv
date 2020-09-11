@@ -22,4 +22,4 @@ np_long = np.array(list_long, dtype=float)
 
 t1 = time.time()
 
-print((t1 - t0) * 1000000)
+print((t1 - t0) * 1000000000)
