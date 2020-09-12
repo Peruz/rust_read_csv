@@ -58,15 +58,14 @@ impl CityPop {
         self.city.push(record.city);
         self.state.push(record.state);
         self.population.push(record.population);
-        self.latitude.push(record.latitude);
-        self.longitude.push(record.longitude);
+        self.latitude.push(record.latitude); self.longitude.push(record.longitude);
     }
-    fn new() -> CityPop {
-        let city: Vec<String> = Vec::new();
-        let state: Vec<String> = Vec::new();
-        let population: Vec<Option<u32>> = Vec::new();
-        let latitude: Vec<f64> = Vec::new();
-        let longitude: Vec<f64> = Vec::new();
+    fn new(capacity: usize) -> CityPop {
+        let city: Vec<String> = Vec::with_capacity(capacity);
+        let state: Vec<String> = Vec::with_capacity(capacity);
+        let population: Vec<Option<u32>> = Vec::with_capacity(capacity);
+        let latitude: Vec<f64> = Vec::with_capacity(capacity);
+        let longitude: Vec<f64> = Vec::with_capacity(capacity);
         let citypop: CityPop = CityPop {city, state, population, latitude, longitude};
         citypop
     }
@@ -75,7 +74,7 @@ impl CityPop {
 fn csv_serde(arg_file: &String) -> CityPop {
     let file = File::open(arg_file).expect("could not open file ");
     let mut reader = csv::Reader::from_reader(file);
-    let mut citypop = CityPop::new();
+    let mut citypop = CityPop::new(4000 as usize);
     for result in reader.deserialize() {
         let record: Record = result.unwrap();
         citypop.add_record(record)
@@ -86,7 +85,7 @@ fn csv_serde(arg_file: &String) -> CityPop {
 fn csv_noserde(arg_file: &String) -> CityPop {
     let file = File::open(arg_file).expect("could not open file");
     let mut rdr = csv::Reader::from_reader(file);
-    let mut citypop = CityPop::new();
+    let mut citypop = CityPop::new(4000 as usize);
     for result_row in rdr.records() {
         let record_row = result_row.unwrap();
         citypop.city.push(String::from(&record_row[0]));
@@ -101,7 +100,7 @@ fn csv_noserde(arg_file: &String) -> CityPop {
 fn buffer_to_struct(arg_file: &String) -> CityPop {
     let file = File::open(arg_file).unwrap();
     let buf = BufReader::new(file);
-    let mut citypop = CityPop::new();
+    let mut citypop = CityPop::new(4000 as usize);
     for l in buf.lines().skip(1) {
         let l_unwrap = match l {
             Ok(l_ok) =>  l_ok, 
@@ -111,7 +110,6 @@ fn buffer_to_struct(arg_file: &String) -> CityPop {
             }
         };
         let mut l_split = l_unwrap.split(',');
-
         citypop.city.push(
             match l_split.next() {
                 Some(v) => String::from(v),
@@ -169,7 +167,7 @@ fn buffer_to_struct(arg_file: &String) -> CityPop {
 fn buffer_onlyloop(arg_file: &String) { 
     let file = File::open(arg_file).unwrap();
     let buf = BufReader::new(file);
-    for l in buf.lines() {
+    for _l in buf.lines() {
         continue;
     }
 }

@@ -1,5 +1,5 @@
 [package]
-name = "csvtutor"
+name = "readcsv"
 version = "0.1.0"
 authors = ["Peruz <lucaperuzzo@outlook.com>"]
 edition = "2018"
