@@ -11,3 +11,4 @@ csv = { git = "https://github.com/BurntSushi/rust-csv.git" }
 clap = { git = "https://github.com/clap-rs/clap.git" }
 rayon = {git = "https://github.com/rayon-rs/rayon.git"}
 serde = {version = "1.0.116", features = ["derive"]}
+arrow = {git = "https://github.com/apache/arrow.git"}

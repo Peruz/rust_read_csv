@@ -5,12 +5,14 @@ use serde::Deserialize;
 use std::fs::File;
 use clap::{Arg, App};
 use std::io::{BufRead, BufReader};
+use arrow;
 
 fn main() {
     let file = get_args();
     println!("reading {}", file);
-    let citypop = csv_read_byte_record(&file);
+    let citypop = csv_serde(&file);
     println!("{:?}", citypop);
+    read_arrow(&file);
 }
 
 fn get_args() -> String {
@@ -58,7 +60,8 @@ impl CityPop {
         self.city.push(record.city);
         self.state.push(record.state);
         self.population.push(record.population);
-        self.latitude.push(record.latitude); self.longitude.push(record.longitude);
+        self.latitude.push(record.latitude);
+        self.longitude.push(record.longitude);
     }
     fn new(capacity: usize) -> CityPop {
         let city: Vec<String> = Vec::with_capacity(capacity);
@@ -69,6 +72,25 @@ impl CityPop {
         let citypop: CityPop = CityPop {city, state, population, latitude, longitude};
         citypop
     }
+}
+
+fn read_arrow(arg_file: &String) {
+    let schema = arrow::datatypes::Schema::new(vec![
+            arrow::datatypes::Field::new("city", arrow::datatypes::DataType::Utf8, false),
+            arrow::datatypes::Field::new("state", arrow::datatypes::DataType::Utf8, false),
+            arrow::datatypes::Field::new("population", arrow::datatypes::DataType::Int64, false),
+            arrow::datatypes::Field::new("latitude", arrow::datatypes::DataType::Float64, false),
+            arrow::datatypes::Field::new("longitude", arrow::datatypes::DataType::Float64, false),
+        ]);
+    let builder = arrow::csv::ReaderBuilder::new()
+            .infer_schema(None)
+            .has_header(true)
+            .with_schema(std::sync::Arc::new(schema))
+            .with_delimiter(b',')
+            .with_batch_size(11000);
+    let file = File::open(arg_file).unwrap();
+    let mut csv = builder.build(file).unwrap();
+    let batch = csv.next().unwrap().unwrap();
 }
 
 fn csv_serde(arg_file: &String) -> CityPop {
@@ -229,5 +251,13 @@ fn bench_csv_read_byte_record(b: &mut test::Bencher) {
     let file = String::from("uspop.csv");
     b.iter(|| {
         csv_read_byte_record(&file);
+    });
+}
+
+#[bench]
+fn bench_arrow(b: &mut test::Bencher) {
+    let file = String::from("uspop.csv");
+    b.iter(|| {
+        read_arrow(&file);
     });
 }
