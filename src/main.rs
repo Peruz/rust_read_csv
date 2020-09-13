@@ -10,9 +10,10 @@ use arrow;
 fn main() {
     let file = get_args();
     println!("reading {}", file);
-    let citypop = csv_serde(&file);
+    let citypop = std_string_buffer(&file);
     println!("{:?}", citypop);
-    read_arrow(&file);
+    let citypop = std_lines(&file);
+    println!("{:?}", citypop);
 }
 
 fn get_args() -> String {
@@ -74,7 +75,7 @@ impl CityPop {
     }
 }
 
-fn read_arrow(arg_file: &String) {
+fn arrow_with_schema(arg_file: &String) {
     let schema = arrow::datatypes::Schema::new(vec![
             arrow::datatypes::Field::new("city", arrow::datatypes::DataType::Utf8, false),
             arrow::datatypes::Field::new("state", arrow::datatypes::DataType::Utf8, false),
@@ -93,7 +94,7 @@ fn read_arrow(arg_file: &String) {
     let batch = csv.next().unwrap().unwrap();
 }
 
-fn csv_serde(arg_file: &String) -> CityPop {
+fn csv_with_serde(arg_file: &String) -> CityPop {
     let file = File::open(arg_file).expect("could not open file ");
     let mut reader = csv::Reader::from_reader(file);
     let mut citypop = CityPop::new(4000 as usize);
@@ -104,7 +105,7 @@ fn csv_serde(arg_file: &String) -> CityPop {
     citypop
 }
 
-fn csv_noserde(arg_file: &String) -> CityPop {
+fn csv_no_serde(arg_file: &String) -> CityPop {
     let file = File::open(arg_file).expect("could not open file");
     let mut rdr = csv::Reader::from_reader(file);
     let mut citypop = CityPop::new(4000 as usize);
@@ -119,7 +120,7 @@ fn csv_noserde(arg_file: &String) -> CityPop {
     return citypop
 }
 
-fn csv_read_byte_record(arg_file: &String) -> CityPop {
+fn csv_byte_record_deserialize(arg_file: &String) -> CityPop {
     let file = File::open(arg_file).unwrap();
     let mut reader = csv::Reader::from_reader(file);
     let mut record = csv::ByteRecord::new();
@@ -128,16 +129,68 @@ fn csv_read_byte_record(arg_file: &String) -> CityPop {
         vec!["city", "state", "population", "latitude", "longitude"]
     );
     while reader.read_byte_record(&mut record).unwrap() {
-        // citypop.add_record(record.deserialize(Some(&header)).unwrap());
         let c: Record = record.deserialize(Some(&header)).unwrap();
     }
     citypop
 }
 
-fn buffer_to_struct(arg_file: &String) -> CityPop {
+fn std_string_buffer(arg_file: &String) -> CityPop {
+    let file = File::open(arg_file).unwrap();
+    let mut filebuffer = BufReader::new(file);
+    let mut linebuffer = String::new();
+    let mut citypop = CityPop::new(10000 as usize);
+    filebuffer.read_line(&mut linebuffer).unwrap();
+    linebuffer.clear();
+    while filebuffer.read_line(&mut linebuffer).unwrap() != 0 {
+        let mut l_split = linebuffer.split(',');
+        citypop.city.push(
+            match l_split.next() {
+                Some(v) => String::from(v),
+                None => String::from("None")
+            }
+        );
+        citypop.state.push(
+            match l_split.next() {
+                Some(v) => String::from(v),
+                None => String::from("None")
+            }
+        );
+        citypop.population.push(
+            match l_split.next() {
+                Some(v) => match v.parse() {
+                    Ok(ok) => Some(ok),
+                    Err(_) => None,
+                },
+                None => None,
+            }
+        );
+        citypop.latitude.push(
+            match l_split.next() {
+                Some(v) => match v.parse() {
+                    Ok(ok) => ok,
+                    Err(_) => std::f64::NAN,
+                },
+                None => std::f64::NAN,
+            }
+        );
+        citypop.longitude.push(
+            match l_split.next() {
+                Some(v) => match v.trim_end().parse() {
+                    Ok(ok) => ok,
+                    Err(_) => std::f64::NAN
+                },
+                None => std::f64::NAN,
+            }
+        );
+        linebuffer.clear()
+    }
+    return citypop
+}
+
+fn std_lines(arg_file: &String) -> CityPop {
     let file = File::open(arg_file).unwrap();
     let buf = BufReader::new(file);
-    let mut citypop = CityPop::new(4000 as usize);
+    let mut citypop = CityPop::new(10000 as usize);
     for l in buf.lines().skip(1) {
         let l_unwrap = match l {
             Ok(l_ok) =>  l_ok, 
@@ -150,17 +203,13 @@ fn buffer_to_struct(arg_file: &String) -> CityPop {
         citypop.city.push(
             match l_split.next() {
                 Some(v) => String::from(v),
-                None => {
-                    String::from("None")
-                }
+                None => String::from("None")
             }
         );
         citypop.state.push(
             match l_split.next() {
                 Some(v) => String::from(v),
-                None => {
-                    String::from("None")
-                }
+                None => String::from("None")
             }
         );
         citypop.population.push(
@@ -169,9 +218,7 @@ fn buffer_to_struct(arg_file: &String) -> CityPop {
                     Ok(ok) => Some(ok),
                     Err(_) => None,
                 },
-                None => {
-                    None
-                },
+                None => None,
             }
         );
         citypop.latitude.push(
@@ -180,20 +227,16 @@ fn buffer_to_struct(arg_file: &String) -> CityPop {
                     Ok(ok) => ok,
                     Err(_) => std::f64::NAN,
                 },
-                None => {
-                    std::f64::NAN
-                },
+                None => std::f64::NAN,
             }
         );
         citypop.longitude.push(
             match l_split.next() {
                 Some(v) => match v.parse() {
                     Ok(ok) => ok,
-                    Err(_) => std::f64::NAN,
+                    Err(_) => std::f64::NAN
                 },
-                None => {
-                    std::f64::NAN
-                },
+                None => std::f64::NAN,
             }
         );
     }
@@ -201,7 +244,7 @@ fn buffer_to_struct(arg_file: &String) -> CityPop {
 }
 
 // just for reference
-fn buffer_onlyloop(arg_file: &String) { 
+fn std_lines_onlyloop(arg_file: &String) { 
     let file = File::open(arg_file).unwrap();
     let buf = BufReader::new(file);
     for _l in buf.lines() {
@@ -212,52 +255,61 @@ fn buffer_onlyloop(arg_file: &String) {
 // BENCHMARKS
 
 #[bench]
-fn bench_buffer_to_struct(b: &mut test::Bencher) {
+fn bench_std_lines(b: &mut test::Bencher) {
     let file = String::from("uspop.csv");
     b.iter(|| {
-        let citypop = buffer_to_struct(&file);
+        let citypop = std_lines(&file);
         test::black_box(citypop);
     });
 }
 
 #[bench]
-fn bench_csv_noserde(b: &mut test::Bencher) {
+fn bench_std_string_buffer(b: &mut test::Bencher) {
     let file = String::from("uspop.csv");
     b.iter(|| {
-        let citypop = csv_noserde(&file);
+        let citypop = std_string_buffer(&file);
         test::black_box(citypop);
     });
 }
 
 #[bench]
-fn bench_csv_serde(b: &mut test::Bencher) {
+fn bench_csv_no_serde(b: &mut test::Bencher) {
     let file = String::from("uspop.csv");
     b.iter(|| {
-        let citypop = csv_serde(&file);
+        let citypop = csv_no_serde(&file);
         test::black_box(citypop);
     });
 }
 
 #[bench]
-fn bench_buffer_onlyloop(b: &mut test::Bencher) {
+fn bench_csv_with_serde(b: &mut test::Bencher) {
     let file = String::from("uspop.csv");
     b.iter(|| {
-        buffer_onlyloop(&file);
+        let citypop = csv_with_serde(&file);
+        test::black_box(citypop);
     });
 }
 
 #[bench]
-fn bench_csv_read_byte_record(b: &mut test::Bencher) {
+fn bench_std_lines_onlyloop(b: &mut test::Bencher) {
     let file = String::from("uspop.csv");
     b.iter(|| {
-        csv_read_byte_record(&file);
+        std_lines_onlyloop(&file);
     });
 }
 
 #[bench]
-fn bench_arrow(b: &mut test::Bencher) {
+fn bench_csv_byte_record_deserialize(b: &mut test::Bencher) {
     let file = String::from("uspop.csv");
     b.iter(|| {
-        read_arrow(&file);
+        csv_byte_record_deserialize(&file);
+    });
+}
+
+#[bench]
+fn bench_arrow_with_schema(b: &mut test::Bencher) {
+    let file = String::from("uspop.csv");
+    b.iter(|| {
+        arrow_with_schema(&file);
     });
 }
