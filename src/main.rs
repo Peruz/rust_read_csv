@@ -14,6 +14,7 @@ fn main() {
     println!("{:?}", citypop);
     let citypop = std_lines(&file);
     println!("{:?}", citypop);
+    std_byte_buffer(&file);
 }
 
 fn get_args() -> String {
@@ -247,10 +248,34 @@ fn std_lines(arg_file: &String) -> CityPop {
 fn std_lines_onlyloop(arg_file: &String) { 
     let file = File::open(arg_file).unwrap();
     let buf = BufReader::new(file);
-    for _l in buf.lines() {
+    for _l in buf.lines().skip(1) {
         continue;
     }
 }
+
+// just for reference
+fn std_string_buffer_onlywhile(arg_file: &String) { 
+    let file = File::open(arg_file).unwrap();
+    let mut filebuffer = BufReader::new(file);
+    let mut linebuffer = String::new();
+    filebuffer.read_line(&mut linebuffer).unwrap();
+    linebuffer.clear();
+    while filebuffer.read_line(&mut linebuffer).unwrap() != 0 {
+        linebuffer.clear()
+    }
+}
+
+fn std_byte_buffer(arg_file: &String) {
+    let file = File::open(arg_file).unwrap();
+    let mut filebuffer = BufReader::new(file);
+    let mut linebuffer = Vec::new();
+    while filebuffer.read_until(b'\n', &mut linebuffer).unwrap() != 0 {
+        // println!("{:?}", linebuffer);
+        let linebuffer_split: Vec<_> = linebuffer.split(|i| *i == 44).collect();
+        // println!("{:?}", linebuffer_split);
+    }
+}
+
 
 // BENCHMARKS
 
@@ -297,6 +322,22 @@ fn bench_std_lines_onlyloop(b: &mut test::Bencher) {
         std_lines_onlyloop(&file);
     });
 }
+
+#[bench]
+fn bench_std_string_buffer_onlywhile(b: &mut test::Bencher) {
+    let file = String::from("uspop.csv");
+    b.iter(|| {
+        std_string_buffer_onlywhile(&file);
+    });
+}
+
+// #[bench]
+// fn bench_std_byte_buffer_onlywhile(b: &mut test::Bencher) {
+//     let file = String::from("uspop.csv");
+//     b.iter(|| {
+//         std_byte_buffer(&file);
+//     });
+// }
 
 #[bench]
 fn bench_csv_byte_record_deserialize(b: &mut test::Bencher) {
