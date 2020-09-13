@@ -9,7 +9,7 @@ use std::io::{BufRead, BufReader};
 fn main() {
     let file = get_args();
     println!("reading {}", file);
-    let citypop = buffer_to_struct(&file);
+    let citypop = csv_read_byte_record(&file);
     println!("{:?}", citypop);
 }
 
@@ -95,6 +95,21 @@ fn csv_noserde(arg_file: &String) -> CityPop {
         citypop.longitude.push(record_row[4].parse().expect("no londitude"));
     }
     return citypop
+}
+
+fn csv_read_byte_record(arg_file: &String) -> CityPop {
+    let file = File::open(arg_file).unwrap();
+    let mut reader = csv::Reader::from_reader(file);
+    let mut record = csv::ByteRecord::new();
+    let mut citypop = CityPop::new(4000 as usize);
+    let header = csv::ByteRecord::from(
+        vec!["city", "state", "population", "latitude", "longitude"]
+    );
+    while reader.read_byte_record(&mut record).unwrap() {
+        // citypop.add_record(record.deserialize(Some(&header)).unwrap());
+        let c: Record = record.deserialize(Some(&header)).unwrap();
+    }
+    citypop
 }
 
 fn buffer_to_struct(arg_file: &String) -> CityPop {
@@ -206,5 +221,13 @@ fn bench_buffer_onlyloop(b: &mut test::Bencher) {
     let file = String::from("uspop.csv");
     b.iter(|| {
         buffer_onlyloop(&file);
+    });
+}
+
+#[bench]
+fn bench_csv_read_byte_record(b: &mut test::Bencher) {
+    let file = String::from("uspop.csv");
+    b.iter(|| {
+        csv_read_byte_record(&file);
     });
 }
